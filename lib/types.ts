@@ -18,6 +18,7 @@ export interface AnonymousSession {
   created_at: string
   last_active: string
   is_verified: boolean
+  notifications_enabled?: boolean
 }
 
 export interface RoomParticipant {
@@ -35,6 +36,7 @@ export interface TextMessage {
   room_id: string
   participant_id: string
   message: string
+  reply_to_message_id?: string | null
   created_at: string
 }
 

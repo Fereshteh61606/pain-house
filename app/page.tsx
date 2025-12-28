@@ -1,10 +1,10 @@
-import { getRooms } from "@/lib/room-actions"
+import { getRoomsWithParticipantCount } from "@/lib/room-actions"
 import Link from "next/link"
 import { MessageCircle, Mic, Users, Plus } from "lucide-react"
 import { CreateRoomDialog } from "@/components/create-room-dialog"
 
 export default async function HomePage() {
-  const rooms = await getRooms()
+  const rooms = await getRoomsWithParticipantCount()
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
@@ -51,9 +51,17 @@ export default async function HomePage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 text-sm">
-                    <Users className="w-4 h-4" />
-                    <span>{room.capacity}</span>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 text-sm">
+                      <Users className="w-4 h-4" />
+                      <span className="font-medium">{room.active_participants}/{room.capacity}</span>
+                    </div>
+                    {room.active_participants > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        <span>Active</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

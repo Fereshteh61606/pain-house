@@ -15,6 +15,38 @@ export async function getRooms(): Promise<Room[]> {
   return (data as Room[]) || []
 }
 
+export async function getRoomsWithParticipantCount(): Promise<(Room & { active_participants: number })[]> {
+  const supabase = await createClient()
+  
+  const { data: rooms, error: roomsError } = await supabase
+    .from("rooms")
+    .select("*")
+    .order("created_at", { ascending: false })
+
+  if (roomsError) {
+    console.error("[v0] Failed to fetch rooms:", roomsError)
+    return []
+  }
+
+  // Get participant counts for all rooms
+  const roomsWithCounts = await Promise.all(
+    (rooms || []).map(async (room) => {
+      const { count } = await supabase
+        .from("room_participants")
+        .select("*", { count: "exact", head: true })
+        .eq("room_id", room.id)
+        .eq("is_active", true)
+
+      return {
+        ...room,
+        active_participants: count || 0,
+      }
+    })
+  )
+
+  return roomsWithCounts as (Room & { active_participants: number })[]
+}
+
 export async function getRoomById(roomId: string): Promise<Room | null> {
   const supabase = await createClient()
   const { data, error } = await supabase.from("rooms").select("*").eq("id", roomId).single()

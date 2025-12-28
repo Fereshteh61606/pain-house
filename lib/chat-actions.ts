@@ -28,6 +28,7 @@ export async function sendMessage(
   roomId: string,
   participantId: string,
   message: string,
+  replyToMessageId?: string,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
 
@@ -39,6 +40,7 @@ export async function sendMessage(
     room_id: roomId,
     participant_id: participantId,
     message: message.trim(),
+    reply_to_message_id: replyToMessageId || null,
   })
 
   if (error) {

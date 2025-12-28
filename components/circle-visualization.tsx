@@ -18,16 +18,16 @@ export function CircleVisualization({ participants, capacity, activeParticipant,
   }, [])
 
   const avatarColors = [
-    "#E57373", // Warm red
-    "#FFB74D", // Warm orange
-    "#FFD54F", // Warm yellow
-    "#AED581", // Soft green
-    "#81C784", // Sage green
-    "#64B5F6", // Soft blue
-    "#9575CD", // Lavender
-    "#F06292", // Rose
-    "#FF8A65", // Coral
-    "#4DB6AC", // Teal
+    "#3B82F6", // blue-500
+    "#A855F7", // purple-500
+    "#EC4899", // pink-500
+    "#F43F5E", // rose-500
+    "#F97316", // orange-500
+    "#F59E0B", // amber-500
+    "#84CC16", // lime-500
+    "#10B981", // emerald-500
+    "#06B6D4", // cyan-500
+    "#6366F1", // indigo-500
   ]
 
   const getAvatarColor = (number: number) => {
