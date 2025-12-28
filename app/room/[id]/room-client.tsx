@@ -7,7 +7,7 @@ import { CircleVisualization } from "@/components/circle-visualization"
 import { TextChat } from "@/components/text-chat"
 import { AudioChat } from "@/components/audio-chat"
 import { CaptchaVerification } from "@/components/captcha-verification"
-import { ArrowLeft, MessageCircle, Mic, Users, ChevronUp, ChevronDown } from "lucide-react"
+import { ArrowLeft, MessageCircle, Mic, Users } from "lucide-react"
 import { getOrCreateSession } from "@/lib/session-manager"
 import { joinRoom, leaveRoom, getRoomParticipants } from "@/lib/room-actions"
 import { createClient } from "@/lib/supabase/client"
@@ -29,7 +29,7 @@ export function RoomClient({ room, initialParticipants }: RoomClientProps) {
   const [activeSpeaker, setActiveSpeaker] = useState<number | null>(null)
   const [showCaptcha, setShowCaptcha] = useState(false)
   const [communicationMode, setCommunicationMode] = useState<"text" | "audio">("text")
-  const [showCircle, setShowCircle] = useState(true)
+  const [showCircleModal, setShowCircleModal] = useState(false)
   const channelRef = useRef<any>(null)
   const lastActivityRef = useRef<Date>(new Date())
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -173,34 +173,65 @@ export function RoomClient({ room, initialParticipants }: RoomClientProps) {
     <div className="h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
       {showCaptcha && <CaptchaVerification onVerified={handleCaptchaVerified} locale={locale} />}
 
+      {/* Circle Modal for Mobile */}
+      {showCircleModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 lg:hidden" onClick={() => setShowCircleModal(false)}>
+          <div className="absolute inset-x-4 top-20 bottom-20 bg-white dark:bg-slate-900 rounded-2xl p-6 flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                {locale === "en" ? "Participants" : "شرکت کنندگان"}
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowCircleModal(false)}>
+                ✕
+              </Button>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <CircleVisualization
+                participants={participants}
+                capacity={room.capacity}
+                activeParticipant={activeSpeaker}
+                locale={locale}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Compact Header */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 sm:px-4 py-2 sm:py-3 flex-shrink-0">
-        <div className="max-w-[1800px] mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 py-2 flex-shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push("/")}
-              className="text-slate-600 dark:text-slate-400 flex-shrink-0 px-2"
+              className="text-slate-600 dark:text-slate-400 px-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline ml-1">{locale === "en" ? "Back" : "بازگشت"}</span>
             </Button>
-            <div className="min-w-0">
-              <h1 className="text-sm sm:text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                 {locale === "en" ? room.name : room.name_fa}
               </h1>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
-                {participants.length}/{room.capacity}
-              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Mobile: Show Circle Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCircleModal(true)}
+              className="lg:hidden px-2"
+            >
+              <Users className="h-4 w-4 mr-1" />
+              <span className="text-xs">{participants.length}</span>
+            </Button>
+            
             {isInRoom && (
-              <div className="flex items-center gap-1.5 bg-teal-100 dark:bg-teal-900/30 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
-                <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse" />
-                <span className="text-xs sm:text-sm font-medium text-teal-700 dark:text-teal-300">
+              <div className="flex items-center gap-1 bg-teal-100 dark:bg-teal-900/30 px-2 py-1 rounded-full">
+                <div className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-pulse" />
+                <span className="text-xs font-medium text-teal-700 dark:text-teal-300">
                   #{myParticipantNumber}
                 </span>
               </div>
@@ -215,22 +246,58 @@ export function RoomClient({ room, initialParticipants }: RoomClientProps) {
             </Button>
           </div>
         </div>
+
+        {/* Mode Switcher - Always visible when in room */}
+        {isInRoom && (
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => setCommunicationMode("text")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-medium transition-all text-sm ${
+                communicationMode === "text"
+                  ? "bg-teal-600 text-white"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+              }`}
+            >
+              <MessageCircle className="w-4 h-4" />
+              {locale === "en" ? "Text" : "متن"}
+            </button>
+            <button
+              onClick={() => setCommunicationMode("audio")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg font-medium transition-all text-sm ${
+                communicationMode === "audio"
+                  ? "bg-teal-600 text-white"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+              }`}
+            >
+              <Mic className="w-4 h-4" />
+              {locale === "en" ? "Voice" : "صدا"}
+            </button>
+            <Button
+              onClick={handleLeaveRoom}
+              variant="outline"
+              size="sm"
+              className="px-3"
+            >
+              {locale === "en" ? "Leave" : "خروج"}
+            </Button>
+          </div>
+        )}
       </header>
 
-      {/* Main Content - Responsive Layout */}
+      {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         {!isInRoom ? (
           /* Join Screen */
-          <div className="h-full flex items-center justify-center p-4 sm:p-8">
-            <div className="max-w-md w-full text-center space-y-4 sm:space-y-6">
-              <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center">
-                <Users className="w-8 h-8 sm:w-12 sm:h-12 text-teal-600 dark:text-teal-400" />
+          <div className="h-full flex items-center justify-center p-4">
+            <div className="max-w-md w-full text-center space-y-4">
+              <div className="w-20 h-20 mx-auto bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center">
+                <Users className="w-10 h-10 text-teal-600 dark:text-teal-400" />
               </div>
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">
                   {locale === "en" ? "Join the Circle" : "به دایره بپیوندید"}
                 </h2>
-                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+                <p className="text-sm text-slate-600 dark:text-slate-400">
                   {locale === "en" ? room.description : room.description_fa}
                 </p>
               </div>
@@ -238,7 +305,7 @@ export function RoomClient({ room, initialParticipants }: RoomClientProps) {
                 onClick={handleJoinRoom}
                 disabled={isJoining || participants.length >= room.capacity}
                 size="lg"
-                className="bg-teal-600 hover:bg-teal-700 text-white px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg w-full sm:w-auto"
+                className="bg-teal-600 hover:bg-teal-700 text-white w-full py-6 text-base"
               >
                 {isJoining
                   ? locale === "en"
@@ -256,24 +323,12 @@ export function RoomClient({ room, initialParticipants }: RoomClientProps) {
             </div>
           </div>
         ) : (
-          /* In Room - Mobile: Stack, Desktop: Split */
+          /* In Room - Mobile: Chat First, Desktop: Split */
           <div className="h-full flex flex-col lg:flex-row">
-            {/* Circle Section - Collapsible on Mobile */}
-            <div className={`lg:w-[45%] border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col transition-all ${showCircle ? 'flex-shrink-0' : 'h-0 lg:h-auto overflow-hidden lg:overflow-visible'}`}>
-              {/* Mobile: Collapsible Header */}
-              <button
-                onClick={() => setShowCircle(!showCircle)}
-                className="lg:hidden flex items-center justify-between p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900"
-              >
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  {locale === "en" ? "Circle" : "دایره"} ({participants.length})
-                </span>
-                {showCircle ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-              </button>
-
-              {/* Circle Visualization */}
-              <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
-                <div className="w-full max-w-[400px] lg:max-w-[500px]">
+            {/* Desktop: Circle on Left */}
+            <div className="hidden lg:flex lg:w-[45%] border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex-col">
+              <div className="flex-1 flex items-center justify-center p-8">
+                <div className="w-full max-w-[500px]">
                   <CircleVisualization
                     participants={participants}
                     capacity={room.capacity}
@@ -282,45 +337,9 @@ export function RoomClient({ room, initialParticipants }: RoomClientProps) {
                   />
                 </div>
               </div>
-              
-              {/* Controls */}
-              <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-slate-800 space-y-2 sm:space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setCommunicationMode("text")}
-                    className={`flex items-center justify-center gap-2 py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg font-medium transition-all text-sm ${
-                      communicationMode === "text"
-                        ? "bg-teal-600 text-white"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                    }`}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span className="hidden sm:inline">{locale === "en" ? "Text" : "متن"}</span>
-                  </button>
-                  <button
-                    onClick={() => setCommunicationMode("audio")}
-                    className={`flex items-center justify-center gap-2 py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg font-medium transition-all text-sm ${
-                      communicationMode === "audio"
-                        ? "bg-teal-600 text-white"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                    }`}
-                  >
-                    <Mic className="w-4 h-4" />
-                    <span className="hidden sm:inline">{locale === "en" ? "Voice" : "صدا"}</span>
-                  </button>
-                </div>
-                <Button
-                  onClick={handleLeaveRoom}
-                  variant="outline"
-                  className="w-full text-sm"
-                  size="sm"
-                >
-                  {locale === "en" ? "Leave Circle" : "ترک دایره"}
-                </Button>
-              </div>
             </div>
 
-            {/* Chat Section - Full height on mobile */}
+            {/* Chat Area - Full screen on mobile, right side on desktop */}
             <div className="flex-1 bg-slate-50 dark:bg-slate-950 flex flex-col min-h-0">
               {communicationMode === "text" && myParticipantId && session ? (
                 <TextChat
