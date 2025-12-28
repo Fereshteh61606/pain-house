@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Mic, MicOff, Volume2 } from "lucide-react"
 import { startSpeaking, stopSpeaking, getActiveSpeakers } from "@/lib/audio-actions"
@@ -130,22 +129,23 @@ export function AudioChat({
   const otherSpeakers = activeSpeakers.filter((num) => num !== myParticipantNumber)
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Volume2 className="h-5 w-5" />
-          {locale === "en" ? "Audio Room" : "اتاق صوتی"}
-        </CardTitle>
-        <CardDescription>
-          {locale === "en"
-            ? "Click the microphone to speak. Only one person can speak at a time."
-            : "برای صحبت کردن روی میکروفون کلیک کنید. فقط یک نفر می تواند در یک زمان صحبت کند."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="h-full flex flex-col p-4 space-y-4 overflow-y-auto">
+        {/* Header */}
+        <div className="text-center space-y-1 flex-shrink-0">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-center gap-2">
+            <Volume2 className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+            {locale === "en" ? "Audio Room" : "اتاق صوتی"}
+          </h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            {locale === "en"
+              ? "Tap the microphone to speak"
+              : "برای صحبت روی میکروفون ضربه بزنید"}
+          </p>
+        </div>
+
         {/* Microphone permission */}
         {micPermission === "denied" && (
-          <div className="p-4 rounded-lg bg-destructive/10 text-destructive text-sm text-center">
+          <div className="p-4 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm text-center">
             {locale === "en"
               ? "Microphone access denied. Please enable microphone permissions in your browser settings."
               : "دسترسی به میکروفون رد شد. لطفاً مجوزهای میکروفون را در تنظیمات مرورگر خود فعال کنید."}
@@ -153,15 +153,15 @@ export function AudioChat({
         )}
 
         {/* Microphone control */}
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4 flex-1 justify-center">
           <Button
             size="lg"
             variant={isSpeaking ? "destructive" : "default"}
-            className="h-20 w-20 rounded-full"
+            className="h-24 w-24 rounded-full shadow-lg hover:scale-105 transition-transform"
             onClick={toggleSpeaking}
             disabled={activeSpeakers.length > 0 && !isSpeaking}
           >
-            {isSpeaking ? <MicOff className="h-8 w-8" /> : <Mic className="h-8 w-8" />}
+            {isSpeaking ? <MicOff className="h-10 w-10" /> : <Mic className="h-10 w-10" />}
           </Button>
 
           <div className="text-center">
@@ -189,13 +189,13 @@ export function AudioChat({
 
         {/* Active speakers list */}
         {otherSpeakers.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">
+          <div className="space-y-2 flex-shrink-0">
+            <p className="text-sm font-medium text-center text-slate-700 dark:text-slate-300">
               {locale === "en" ? "Currently speaking:" : "در حال حاضر صحبت می کنند:"}
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 justify-center">
               {otherSpeakers.map((speakerNum) => (
-                <Badge key={speakerNum} variant="secondary" className="animate-pulse">
+                <Badge key={speakerNum} variant="secondary" className="animate-pulse text-base px-3 py-1">
                   {locale === "en" ? `#${speakerNum}` : `${speakerNum}#`}
                 </Badge>
               ))}
@@ -204,9 +204,11 @@ export function AudioChat({
         )}
 
         {/* Guidelines */}
-        <div className="p-4 rounded-lg bg-muted space-y-2">
-          <p className="text-sm font-medium">{locale === "en" ? "Audio Guidelines:" : "دستورالعمل های صوتی:"}</p>
-          <ul className="text-xs text-muted-foreground space-y-1" dir={locale === "fa" ? "rtl" : "ltr"}>
+        <div className="p-4 rounded-lg bg-slate-100 dark:bg-slate-800 space-y-2 flex-shrink-0">
+          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+            {locale === "en" ? "Audio Guidelines:" : "دستورالعمل های صوتی:"}
+          </p>
+          <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1" dir={locale === "fa" ? "rtl" : "ltr"}>
             <li>{locale === "en" ? "• Speak one at a time for clarity" : "• برای وضوح یک نفر در یک زمان صحبت کنید"}</li>
             <li>
               {locale === "en"
@@ -217,12 +219,11 @@ export function AudioChat({
           </ul>
         </div>
 
-        <p className="text-xs text-muted-foreground text-center text-pretty">
+        <p className="text-xs text-slate-500 dark:text-slate-500 text-center text-pretty">
           {locale === "en"
-            ? "Audio is not recorded. This is a live, anonymous conversation."
-            : "صدا ضبط نمی شود. این یک مکالمه زنده و ناشناس است."}
+            ? "🔒 Audio is not recorded. This is a live, anonymous conversation."
+            : "🔒 صدا ضبط نمی شود. این یک مکالمه زنده و ناشناس است."}
         </p>
-      </CardContent>
-    </Card>
+    </div>
   )
 }

@@ -2,9 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Sparkles, Brain, Lightbulb, AlertCircle } from "lucide-react"
+import { Sparkles, ChevronDown, ChevronUp } from "lucide-react"
 
 interface AIInsightsProps {
   messages: any[]
@@ -17,17 +15,12 @@ interface AIInsightsProps {
 export function AIInsights({ messages, sessionId, roomId, roomName, locale }: AIInsightsProps) {
   const [analysis, setAnalysis] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [showAnalysis, setShowAnalysis] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
 
-  async function handleAnalyze(type: "realtime" | "summary") {
-    if (messages.length < 3) {
-      setError(locale === "en" ? "Need at least 3 messages to analyze" : "برای تجزیه و تحلیل حداقل 3 پیام نیاز است")
-      return
-    }
+  async function handleAnalyze() {
+    if (messages.length < 3) return
 
     setIsAnalyzing(true)
-    setError(null)
 
     try {
       const response = await fetch("/api/ai/analyze", {
@@ -37,7 +30,7 @@ export function AIInsights({ messages, sessionId, roomId, roomName, locale }: AI
           messages,
           sessionId,
           roomId,
-          analysisType: type,
+          analysisType: "summary",
           roomName,
         }),
       })
@@ -46,117 +39,90 @@ export function AIInsights({ messages, sessionId, roomId, roomName, locale }: AI
 
       const data = await response.json()
       setAnalysis(data.analysis)
-      setShowAnalysis(true)
+      setIsExpanded(true)
     } catch (err) {
-      setError(locale === "en" ? "Failed to generate analysis" : "تولید تجزیه و تحلیل ناموفق بود")
+      console.error("AI analysis failed:", err)
     } finally {
       setIsAnalyzing(false)
     }
   }
 
-  if (!showAnalysis) {
+  // Minimal collapsed view
+  if (!isExpanded) {
     return (
-      <Card className="border-primary/20">
-        <CardHeader>
+      <div className="flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
+        <button
+          onClick={() => messages.length >= 3 ? handleAnalyze() : setIsExpanded(true)}
+          className="w-full px-4 py-2 flex items-center justify-between hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors"
+        >
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <CardTitle>{locale === "en" ? "AI Support Assistant" : "دستیار پشتیبانی هوش مصنوعی"}</CardTitle>
+            <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              {locale === "en" ? "AI Support" : "پشتیبانی هوش مصنوعی"}
+            </span>
+            {messages.length >= 3 && !analysis && (
+              <span className="text-xs text-purple-600 dark:text-purple-400">
+                {locale === "en" ? "Tap for insights" : "برای بینش ضربه بزنید"}
+              </span>
+            )}
           </div>
-          <CardDescription>
-            {locale === "en"
-              ? "Get personalized insights and suggestions based on your conversation"
-              : "بینش ها و پیشنهادات شخصی سازی شده بر اساس مکالمه خود دریافت کنید"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Button
-              onClick={() => handleAnalyze("realtime")}
-              disabled={isAnalyzing || messages.length < 3}
-              size="sm"
-              variant="outline"
-            >
-              <Brain className="h-4 w-4 mr-2" />
-              {locale === "en" ? "Get Quick Insight" : "دریافت بینش سریع"}
-            </Button>
-            <Button
-              onClick={() => handleAnalyze("summary")}
-              disabled={isAnalyzing || messages.length < 3}
-              size="sm"
-              variant="default"
-            >
-              <Lightbulb className="h-4 w-4 mr-2" />
-              {locale === "en" ? "Full Analysis" : "تجزیه و تحلیل کامل"}
-            </Button>
-          </div>
-
-          {isAnalyzing && (
-            <div className="text-sm text-muted-foreground">
-              {locale === "en" ? "Analyzing conversation..." : "در حال تجزیه و تحلیل مکالمه..."}
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center gap-2 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4" />
-              {error}
-            </div>
-          )}
-
-          <div className="p-3 rounded-lg bg-muted text-xs text-muted-foreground space-y-1">
-            <p className="font-medium">
-              {locale === "en" ? "AI Analysis includes:" : "تجزیه و تحلیل هوش مصنوعی شامل:"}
-            </p>
-            <ul className="space-y-1" dir={locale === "fa" ? "rtl" : "ltr"}>
-              <li>
-                {locale === "en" ? "• Empathetic understanding of your concerns" : "• درک همدلانه نگرانی های شما"}
-              </li>
-              <li>{locale === "en" ? "• Practical coping strategies" : "• استراتژی های عملی مقابله"}</li>
-              <li>
-                {locale === "en"
-                  ? "• Suggestions for professional support when needed"
-                  : "• پیشنهادات برای پشتیبانی حرفه ای در صورت نیاز"}
-              </li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
+          <ChevronDown className="w-4 h-4 text-slate-400" />
+        </button>
+      </div>
     )
   }
 
+  // Expanded view
   return (
-    <Card className="border-primary/20">
-      <CardHeader>
+    <div className="flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
+      <div className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <CardTitle>{locale === "en" ? "AI Insights" : "بینش های هوش مصنوعی"}</CardTitle>
+            <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+              {locale === "en" ? "AI Insights" : "بینش های هوش مصنوعی"}
+            </h3>
           </div>
-          <Badge variant="secondary">{locale === "en" ? "Personalized" : "شخصی سازی شده"}</Badge>
+          <button
+            onClick={() => setIsExpanded(false)}
+            className="p-1 hover:bg-white/50 dark:hover:bg-slate-800/50 rounded"
+          >
+            <ChevronUp className="w-4 h-4 text-slate-400" />
+          </button>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="prose prose-sm max-w-none text-pretty">
-          <div className="p-4 rounded-lg bg-muted/50 whitespace-pre-wrap" dir={locale === "fa" ? "rtl" : "ltr"}>
+
+        {isAnalyzing ? (
+          <div className="text-sm text-slate-600 dark:text-slate-400 text-center py-4">
+            {locale === "en" ? "Analyzing conversation..." : "در حال تجزیه و تحلیل..."}
+          </div>
+        ) : analysis ? (
+          <div className="text-sm text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50 rounded-lg p-3 max-h-48 overflow-y-auto">
             {analysis}
           </div>
-        </div>
-
-        <div className="flex gap-2">
-          <Button onClick={() => setShowAnalysis(false)} variant="outline" size="sm">
-            {locale === "en" ? "New Analysis" : "تجزیه و تحلیل جدید"}
-          </Button>
-          <Button onClick={() => handleAnalyze("summary")} disabled={isAnalyzing} variant="ghost" size="sm">
-            {locale === "en" ? "Refresh" : "تازه سازی"}
-          </Button>
-        </div>
-
-        <div className="p-3 rounded-lg bg-primary/5 text-xs text-muted-foreground text-center">
-          {locale === "en"
-            ? "This AI analysis is for informational purposes only and does not replace professional mental health care."
-            : "این تجزیه و تحلیل هوش مصنوعی فقط برای اهداف اطلاعاتی است و جایگزین مراقبت های حرفه ای سلامت روان نمی شود."}
-        </div>
-      </CardContent>
-    </Card>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              {locale === "en"
+                ? "Get AI-powered insights and support based on your conversation"
+                : "بینش و پشتیبانی مبتنی بر هوش مصنوعی بر اساس مکالمه خود دریافت کنید"}
+            </p>
+            <Button
+              onClick={handleAnalyze}
+              disabled={messages.length < 3}
+              size="sm"
+              className="w-full bg-purple-600 hover:bg-purple-700"
+            >
+              {messages.length < 3
+                ? locale === "en"
+                  ? "Need 3+ messages"
+                  : "نیاز به 3+ پیام"
+                : locale === "en"
+                  ? "Get Insights"
+                  : "دریافت بینش"}
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
