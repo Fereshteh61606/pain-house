@@ -6,7 +6,7 @@ import { useEffect, useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Send, Reply, X, Bell, BellOff } from "lucide-react"
+import { Send, Bell, BellOff } from "lucide-react"
 import { getMessages, sendMessage } from "@/lib/chat-actions"
 import { createClient } from "@/lib/supabase/client"
 import { AIInsights } from "@/components/ai-insights"
@@ -24,11 +24,6 @@ interface TextChatProps {
 
 interface MessageWithParticipant extends TextMessage {
   participant: { participant_number: number }
-  reply_to?: {
-    id: string
-    message: string
-    participant: { participant_number: number }
-  } | null
 }
 
 // Consistent color palette for participants
@@ -61,7 +56,6 @@ export function TextChat({
   const [messages, setMessages] = useState<MessageWithParticipant[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [isSending, setIsSending] = useState(false)
-  const [replyingTo, setReplyingTo] = useState<MessageWithParticipant | null>(null)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default")
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -102,14 +96,9 @@ export function TextChat({
     if (!notificationsEnabled || Notification.permission !== "granted") return
     if (message.participant.participant_number === myParticipantNumber) return
 
-    const isReply = message.reply_to_message_id
-    const title = isReply
-      ? locale === "en"
-        ? `Participant #${message.participant.participant_number} replied to you`
-        : `شرکت کننده ${message.participant.participant_number} به شما پاسخ داد`
-      : locale === "en"
-        ? `New message in ${roomName}`
-        : `پیام جدید در ${roomName}`
+    const title = locale === "en"
+      ? `New message in ${roomName}`
+      : `پیام جدید در ${roomName}`
 
     new Notification(title, {
       body: message.message.slice(0, 100),
@@ -126,12 +115,7 @@ export function TextChat({
         .select(
           `
           *,
-          participant:room_participants!text_messages_participant_id_fkey(participant_number),
-          reply_to:text_messages!text_messages_reply_to_message_id_fkey(
-            id,
-            message,
-            participant:room_participants!text_messages_participant_id_fkey(participant_number)
-          )
+          participant:room_participants!text_messages_participant_id_fkey(participant_number)
         `
         )
         .eq("room_id", roomId)
@@ -163,12 +147,7 @@ export function TextChat({
             .select(
               `
               *,
-              participant:room_participants!text_messages_participant_id_fkey(participant_number),
-              reply_to:text_messages!text_messages_reply_to_message_id_fkey(
-                id,
-                message,
-                participant:room_participants!text_messages_participant_id_fkey(participant_number)
-              )
+              participant:room_participants!text_messages_participant_id_fkey(participant_number)
             `
             )
             .eq("id", payload.new.id)
@@ -217,7 +196,8 @@ export function TextChat({
     const messageToSend = newMessage.trim()
     setIsSending(true)
 
-    const result = await sendMessage(roomId, participantId, messageToSend, replyingTo?.id)
+    // For now, send without reply support until database is updated
+    const result = await sendMessage(roomId, participantId, messageToSend, undefined)
 
     if (result.success) {
       setNewMessage("")
@@ -237,9 +217,6 @@ export function TextChat({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSend()
-    }
-    if (e.key === "Escape") {
-      setReplyingTo(null)
     }
   }
 
@@ -281,15 +258,6 @@ export function TextChat({
                           {locale === "en" ? "You" : "شما"}
                         </span>
                       )}
-                      {!isMe && (
-                        <button
-                          onClick={() => setReplyingTo(msg)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
-                          title={locale === "en" ? "Reply" : "پاسخ"}
-                        >
-                          <Reply className="w-3.5 h-3.5 text-slate-500" />
-                        </button>
-                      )}
                     </div>
 
                     <div
@@ -299,19 +267,6 @@ export function TextChat({
                           : "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-tl-sm"
                       } text-sm leading-relaxed`}
                     >
-                      {/* Reply preview */}
-                      {msg.reply_to && (
-                        <div
-                          className={`mb-2 pb-2 border-l-2 pl-2 text-xs opacity-70 ${
-                            isMe ? "border-white/50" : "border-slate-300 dark:border-slate-600"
-                          }`}
-                        >
-                          <div className="font-semibold mb-0.5">
-                            {locale === "en" ? "Replying to" : "پاسخ به"} #{msg.reply_to.participant.participant_number}
-                          </div>
-                          <div className="line-clamp-2">{msg.reply_to.message}</div>
-                        </div>
-                      )}
                       {msg.message}
                     </div>
                     <span className="text-xs text-slate-500 dark:text-slate-500 px-1">
@@ -327,32 +282,6 @@ export function TextChat({
           </div>
         </ScrollArea>
       </div>
-
-      {/* AI Insights Button */}
-      <AIInsights messages={messages} sessionId={sessionId} roomId={roomId} roomName={roomName} locale={locale} />
-
-      {/* Reply Preview Bar */}
-      {replyingTo && (
-        <div className="flex-shrink-0 px-4 py-2 bg-slate-100 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between max-w-4xl mx-auto">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Reply className="w-4 h-4 text-slate-500 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  {locale === "en" ? "Replying to" : "پاسخ به"} #{replyingTo.participant.participant_number}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-500 truncate">{replyingTo.message}</div>
-              </div>
-            </div>
-            <button
-              onClick={() => setReplyingTo(null)}
-              className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded flex-shrink-0"
-            >
-              <X className="w-4 h-4 text-slate-500" />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Input Area - Fixed at bottom */}
       <div className="flex-shrink-0 p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
@@ -370,19 +299,12 @@ export function TextChat({
               <BellOff className="h-5 w-5 text-slate-400" />
             )}
           </Button>
+          <AIInsights messages={messages} sessionId={sessionId} roomId={roomId} roomName={roomName} locale={locale} />
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={handleKeyPress}
-            placeholder={
-              replyingTo
-                ? locale === "en"
-                  ? "Type your reply..."
-                  : "پاسخ خود را بنویسید..."
-                : locale === "en"
-                  ? "Type your message..."
-                  : "پیام خود را بنویسید..."
-            }
+            placeholder={locale === "en" ? "Type your message..." : "پیام خود را بنویسید..."}
             disabled={isSending}
             className="h-12 text-base rounded-lg border-slate-300 dark:border-slate-600 focus:border-teal-500 dark:focus:border-teal-500"
             dir={locale === "fa" ? "rtl" : "ltr"}

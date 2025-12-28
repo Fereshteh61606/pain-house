@@ -18,7 +18,10 @@ export function AIInsights({ messages, sessionId, roomId, roomName, locale }: AI
   const [showModal, setShowModal] = useState(false)
 
   async function handleAnalyze() {
-    if (messages.length < 3) return
+    if (messages.length < 3) {
+      alert(locale === "en" ? "Need at least 3 messages to analyze" : "حداقل 3 پیام برای تجزیه و تحلیل نیاز است")
+      return
+    }
 
     setIsAnalyzing(true)
     setShowModal(true)
@@ -51,15 +54,16 @@ export function AIInsights({ messages, sessionId, roomId, roomName, locale }: AI
 
   return (
     <>
-      {/* Tiny floating button */}
+      {/* Button in input area */}
       <Button
         onClick={handleAnalyze}
         disabled={messages.length < 3 || isAnalyzing}
-        size="sm"
-        className="fixed bottom-20 right-4 z-40 rounded-full w-12 h-12 p-0 shadow-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+        variant="outline"
+        size="lg"
+        className="h-12 px-3 flex-shrink-0"
         title={locale === "en" ? "Get AI Insights" : "دریافت بینش هوش مصنوعی"}
       >
-        <Sparkles className="w-5 h-5" />
+        <Sparkles className="h-5 w-5 text-purple-600" />
       </Button>
 
       {/* Modal */}
